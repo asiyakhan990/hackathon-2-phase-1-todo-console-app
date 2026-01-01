@@ -1,3 +1,10 @@
+# Data Model: Advanced Todo Features
+
+## Extended Task Model
+
+The existing Task model will be extended to support the new advanced features:
+
+```python
 from dataclasses import dataclass
 from typing import List, Optional
 from datetime import date
@@ -60,10 +67,44 @@ class Task:
         import re
         if not re.match(r'^\d{4}-\d{2}-\d{2}$', date_str):
             raise ValueError(f"Date must be in YYYY-MM-DD format, got '{date_str}'")
-
+        
         # Also validate that it's a real date
         try:
             year, month, day = map(int, date_str.split('-'))
             date(year, month, day)
         except ValueError:
             raise ValueError(f"'{date_str}' is not a valid date")
+```
+
+## Validation Rules from Requirements
+
+1. **Due Date Validation**:
+   - Format must be "YYYY-MM-DD"
+   - Must represent a valid calendar date
+   - Optional field (can be None)
+
+2. **Recurrence Validation**:
+   - Must be one of "daily", "weekly", "monthly", or None
+   - Case-sensitive validation
+   - Optional field (can be None)
+
+3. **Backward Compatibility**:
+   - New fields (due_date, recurrence) default to None
+   - Existing tasks without these fields will work unchanged
+   - JSON serialization/deserialization handles missing fields gracefully
+
+## State Transitions
+
+1. **Task Creation**:
+   - New tasks can be created with due_date and/or recurrence
+   - If not specified, these fields remain None
+
+2. **Task Completion**:
+   - When a recurring task is marked complete, a new instance is created
+   - The new instance has the same title, description, priority, and tags
+   - The new instance has an updated due date based on the recurrence rule
+   - The original task is marked as completed
+
+3. **Task Updates**:
+   - Due dates and recurrence can be modified via update operations
+   - Changes only affect future instances for recurring tasks

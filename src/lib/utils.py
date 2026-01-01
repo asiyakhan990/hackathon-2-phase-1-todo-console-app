@@ -1,123 +1,79 @@
 """
 Utility functions for the Todo Console Application.
-
-This module contains helper functions for validation, formatting,
-and other common operations used throughout the application.
+Includes ANSI color formatting functions.
 """
+from src.lib.date_utils import format_due_date_display
 
 
-def validate_task_title(title: str) -> bool:
+def print_colored_table(tasks):
     """
-    Validate that a task title is not empty or just whitespace.
-    
-    Args:
-        title (str): The title to validate
-        
-    Returns:
-        bool: True if the title is valid, False otherwise
-    """
-    return isinstance(title, str) and bool(title.strip())
-
-
-def validate_task_description(description: str) -> bool:
-    """
-    Validate that a task description is a string (can be empty).
-    
-    Args:
-        description (str): The description to validate
-        
-    Returns:
-        bool: True if the description is valid, False otherwise
-    """
-    return isinstance(description, str)
-
-
-def format_task_display(task) -> str:
-    """
-    Format a task for display in the console.
-    
-    Args:
-        task: A task object with id, title, description, and complete attributes
-        
-    Returns:
-        str: A formatted string representation of the task
-    """
-    status = "[x]" if getattr(task, 'complete', False) else "[ ]"
-    title = getattr(task, 'title', 'No Title')
-    description = getattr(task, 'description', '')
-    task_id = getattr(task, 'id', 'No ID')
-    
-    return f"{task_id}. {status} {title} - {description}"
-
-
-def format_task_list_display(tasks) -> str:
-    """
-    Format a list of tasks for display in the console.
-    
-    Args:
-        tasks: A list of task objects
-        
-    Returns:
-        str: A formatted string representation of the task list
+    Print tasks in a colored table format.
     """
     if not tasks:
-        return "No tasks in the list"
-    
-    task_lines = []
+        print("No tasks to display.")
+        return
+
+    # Print table header
+    print(f"{'ID':<3} | {'Status':<8} | {'Priority':<12} | {'Tags':<15} | {'Due Date':<30} | {'Description':<30}")
+    print("-" * 100)
+
+    # Print each task
     for task in tasks:
-        task_lines.append(format_task_display(task))
-    
-    return "\n".join(task_lines)
+        task_str = format_task_with_colors(task)
+        print(task_str)
 
 
-def parse_task_id(user_input: str) -> int:
+def format_task_with_colors(task):
     """
-    Parse a task ID from user input.
-    
-    Args:
-        user_input (str): The user input containing the ID
-        
-    Returns:
-        int: The parsed task ID
-        
-    Raises:
-        ValueError: If the input cannot be parsed as an integer
+    Format a single task with ANSI colors.
     """
-    try:
-        task_id = int(user_input)
-        if task_id <= 0:
-            raise ValueError("Task ID must be a positive integer")
-        return task_id
-    except ValueError:
-        raise ValueError(f"Invalid task ID: {user_input}. Must be a positive integer.")
+    # ANSI color codes
+    RED = '\033[31m'
+    YELLOW = '\033[33m'
+    GREEN = '\033[32m'
+    BOLD = '\033[1m'
+    RESET = '\033[0m'  # Reset to default color
+
+    # Format ID
+    id_str = f"{task.id:<3}"
+
+    # Format status
+    status = "[x]" if task.completed else "[ ]"
+    status_str = f"{status:<8}"
+
+    # Format priority with colors and symbols
+    if task.priority == "high":
+        priority_str = f"{RED}★★★ HIGH{RESET}"
+    elif task.priority == "medium":
+        priority_str = f"{YELLOW}★★ MED{RESET}"
+    elif task.priority == "low":
+        priority_str = f"{GREEN}★ LOW{RESET}"
+    else:
+        priority_str = f"{task.priority or 'None':<12}"
+
+    # Format tags
+    tags_str = ",".join(task.tags) if task.tags else ""
+    tags_str = f"{tags_str:<15}"
+
+    # Format due date and recurrence
+    due_date_str = format_due_date_display(task.due_date)
+    if task.recurrence:
+        due_date_str += f" [RECUR: {task.recurrence}]"
+
+    # Limit the due date string length to fit in the table
+    due_date_str = due_date_str[:30] if len(due_date_str) > 30 else due_date_str
+    due_date_str = f"{due_date_str:<30}"
+
+    # Format description
+    desc_str = f"{task.description:<30}"
+
+    return f"{id_str} | {status_str} | {priority_str:<12} | {tags_str} | {due_date_str} | {desc_str}"
 
 
-def confirm_action(prompt: str) -> bool:
+def validate_priority(priority):
     """
-    Prompt the user for confirmation of an action.
-    
-    Args:
-        prompt (str): The confirmation prompt to display
-        
-    Returns:
-        bool: True if the user confirms, False otherwise
+    Validate that the priority is one of the allowed values.
     """
-    response = input(f"{prompt} (y/n): ").strip().lower()
-    return response in ['y', 'yes', '1', 'true', 't']
-
-
-def safe_input(prompt: str = "") -> str:
-    """
-    Safely get input from the user, handling potential interruptions.
-    
-    Args:
-        prompt (str): The input prompt to display
-        
-    Returns:
-        str: The user input, or empty string if interrupted
-    """
-    try:
-        return input(prompt)
-    except (KeyboardInterrupt, EOFError):
-        print("\nOperation cancelled.")
-        return ""
+    if priority is None:
+        return True
+    return priority.lower() in ["high", "medium", "low"]
